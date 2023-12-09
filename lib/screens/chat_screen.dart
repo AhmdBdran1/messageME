@@ -32,6 +32,24 @@ class _ChatScrrenState extends State<ChatScrren> {
         signInUser=user;
       }
 
+      // void getMessages() async{
+      //  final messages= await _firestore.collection('messages').get();
+      //  for(var message in messages.docs){
+      //    print(message.data());
+      //  }
+      // }
+
+
+      void messagesStreams() async{
+
+       await  for (var snapshot in _firestore.collection('messages').snapshots()){
+         for (var message in snapshot.docs){
+           print(message.data());
+         }
+       }
+      }
+
+
     }catch(e){
       print(e);
     }
@@ -67,7 +85,35 @@ class _ChatScrrenState extends State<ChatScrren> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(),
+            StreamBuilder<QuerySnapshot>(
+                stream: _firestore.collection('messages').snapshots(),
+                builder: (context, snapshot){
+                  List<MessageLine> messageWidgets=[];
+                  if(!snapshot.hasData){
+                    //add here a spinner
+                    return Center(
+                      child: CircularProgressIndicator(
+                        backgroundColor: Colors.blue,
+                      ),
+                    );
+                  }
+
+                  final messages=snapshot.data!.docs;
+                  for(var message in messages){
+                    final messageText=message.get('text');
+                    final messageSender=message.get('sender');
+                    final messageWidget=MessageLine(sender: messageSender,text: messageText);
+                    messageWidgets.add(messageWidget);
+                  }
+                  return Expanded(
+                    child: ListView(
+                      padding: EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+                      children: messageWidgets,
+
+                    ),
+                  );
+                },
+            ),
             Container(
 
               decoration: BoxDecoration(
@@ -118,6 +164,33 @@ class _ChatScrrenState extends State<ChatScrren> {
       ),
 
 
+    );
+  }
+}
+
+
+class MessageLine extends StatelessWidget {
+  final String sender;
+  final String text;
+
+  const MessageLine({super.key, required this.sender, required this.text});
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: Material(
+
+        color: Colors.blue[800],
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 10,horizontal: 20),
+            child: Text(
+              '$text - $sender',
+              style: TextStyle(fontSize: 15.0,color: Colors.white),
+            ),
+          ),
+      ),
     );
   }
 }
