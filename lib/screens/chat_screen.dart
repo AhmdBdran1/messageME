@@ -1,20 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+late User signInUser;
+
+final _firestore=FirebaseFirestore.instance;
+
 class ChatScrren extends StatefulWidget {
   const ChatScrren({super.key});
 
+
   static const String screenRoute ='chat_screen';
+
+
+
 
   @override
   State<ChatScrren> createState() => _ChatScrrenState();
 }
 
+
+
 class _ChatScrrenState extends State<ChatScrren> {
-  final _firestore=FirebaseFirestore.instance;
+  final messageTextController=TextEditingController();
   String? messageText;
   final _auth =FirebaseAuth.instance;
-  late User signInUser;
 
   @override
   void initState() {
@@ -32,22 +42,6 @@ class _ChatScrrenState extends State<ChatScrren> {
         signInUser=user;
       }
 
-      // void getMessages() async{
-      //  final messages= await _firestore.collection('messages').get();
-      //  for(var message in messages.docs){
-      //    print(message.data());
-      //  }
-      // }
-
-
-      void messagesStreams() async{
-
-       await  for (var snapshot in _firestore.collection('messages').snapshots()){
-         for (var message in snapshot.docs){
-           print(message.data());
-         }
-       }
-      }
 
 
     }catch(e){
@@ -85,35 +79,7 @@ class _ChatScrrenState extends State<ChatScrren> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            StreamBuilder<QuerySnapshot>(
-                stream: _firestore.collection('messages').snapshots(),
-                builder: (context, snapshot){
-                  List<MessageLine> messageWidgets=[];
-                  if(!snapshot.hasData){
-                    //add here a spinner
-                    return Center(
-                      child: CircularProgressIndicator(
-                        backgroundColor: Colors.blue,
-                      ),
-                    );
-                  }
-
-                  final messages=snapshot.data!.docs;
-                  for(var message in messages){
-                    final messageText=message.get('text');
-                    final messageSender=message.get('sender');
-                    final messageWidget=MessageLine(sender: messageSender,text: messageText);
-                    messageWidgets.add(messageWidget);
-                  }
-                  return Expanded(
-                    child: ListView(
-                      padding: EdgeInsets.symmetric(horizontal: 10,vertical: 20),
-                      children: messageWidgets,
-
-                    ),
-                  );
-                },
-            ),
+            MessageStreamBuilder(),
             Container(
 
               decoration: BoxDecoration(
@@ -129,6 +95,7 @@ class _ChatScrrenState extends State<ChatScrren> {
                 children: [
                   Expanded(
                       child: TextField(
+                        controller: messageTextController,
                         onChanged: (value){
                           messageText=value;
                         },
@@ -142,9 +109,11 @@ class _ChatScrrenState extends State<ChatScrren> {
                       ),
                   ),
                   TextButton(onPressed: (){
-                   _firestore.collection('messages').add({
+                    messageTextController.clear();
+                    _firestore.collection('messages').add({
                      'text':messageText,
                      'sender':signInUser.email,
+                      'time':FieldValue.serverTimestamp(),
                    });
                   }, child: Text(
                     'send',
@@ -169,27 +138,109 @@ class _ChatScrrenState extends State<ChatScrren> {
 }
 
 
+
+
+
+
+
+class MessageStreamBuilder extends StatelessWidget {
+  const MessageStreamBuilder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.collection('messages').orderBy('time').snapshots(),
+      builder: (context, snapshot){
+        List<MessageLine> messageWidgets=[];
+        if(!snapshot.hasData || snapshot.data!.docs.isEmpty){
+          //add here a spinner
+          return Expanded(
+            child: Center(
+              child: CircularProgressIndicator(
+                backgroundColor: Colors.blue,
+              ),
+            ),
+          );
+        }else {
+          final messages=snapshot.data!.docs.reversed;
+          for(var message in messages){
+            final messageText=message.get('text');
+            final messageSender=message.get('sender');
+            final currentUser=signInUser.email;
+
+
+            final messageWidget=MessageLine(
+                sender: messageSender,
+                text: messageText,
+                isMe: currentUser==messageSender,
+            );
+            messageWidgets.add(messageWidget);
+          }
+          return Expanded(
+            child: ListView(
+              reverse: true,
+              padding: EdgeInsets.symmetric(horizontal: 10,vertical: 20),
+              children: messageWidgets,
+
+            ),
+          );
+
+        }
+
+
+      },
+    );
+  }
+}
+
+
+
+
+
+
+
+
 class MessageLine extends StatelessWidget {
   final String sender;
   final String text;
+  final bool isMe;
 
-  const MessageLine({super.key, required this.sender, required this.text});
+  const MessageLine({super.key, required this.sender, required this.text, required this.isMe});
 
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.all(10),
-      child: Material(
+      child: Column(
+        crossAxisAlignment: isMe?CrossAxisAlignment.end:CrossAxisAlignment.start,
 
-        color: Colors.blue[800],
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 10,horizontal: 20),
-            child: Text(
-              '$text - $sender',
-              style: TextStyle(fontSize: 15.0,color: Colors.white),
+        children:[
+
+
+          Text('$sender',style: TextStyle(fontSize: 12,color:Colors.black45),),
+
+          Material(
+
+            borderRadius:isMe? BorderRadius.only(
+                topLeft: Radius.circular(30),
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30)
+            ):BorderRadius.only(
+                topRight: Radius.circular(30),
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30)
             ),
-          ),
+          elevation: 5,
+          color:isMe? Colors.blue[800]:Colors.white,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 10,horizontal: 20),
+              child: Text(
+                '$text',
+                style: TextStyle(fontSize: 15.0,color: isMe? Colors.white:Colors.black87),
+              ),
+            ),
+        ),]
       ),
     );
   }

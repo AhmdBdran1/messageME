@@ -4,7 +4,9 @@ import 'package:msg_app/screens/chat_screen.dart';
 import 'package:msg_app/screens/registeration_screen.dart';
 import 'package:msg_app/screens/signin_screen.dart';
 import 'package:msg_app/screens/welcome_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+final _auth =FirebaseAuth.instance;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
@@ -12,6 +14,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+
   const MyApp({super.key});
 
   // This widget is the root of your application.
@@ -37,7 +40,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      initialRoute: WelcomeScreen.scrrenRoute,
+      initialRoute:_auth.currentUser!=null? ChatScrren.screenRoute:WelcomeScreen.scrrenRoute,
 
       routes: {
         WelcomeScreen.scrrenRoute:(context) => const WelcomeScreen(),
