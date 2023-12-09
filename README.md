@@ -9,7 +9,7 @@ Welcome to the Flutter Firebase Messaging App repository! This simple messaging 
 
 
 
-![Screenshot 1](images/1.jpg)
+![Screenshot 1](images/1.JPG)
 ![Screenshot 2](images/2.jpg)
-![Screenshot 3](images/3.jpg)
+![Screenshot 3](images/3.JPG)
 ![Screenshot 4](images/4.jpg)
